@@ -1,0 +1,58 @@
+       UW PICO 5.09                 File: bin/server.dart                  Modified  
+
+
+import 'package:shelf/shelf.dart';
+import 'package:shelf/shelf_io.dart' as io;
+import 'package:shelf_router/shelf_router.dart';
+
+void main() async {
+  final app = Router();
+  
+  // HOME ROUTE
+  app.get('/', (Request req) {
+    return Response.ok('Backend is running 🚀');
+  });
+     
+  // TEST ROUTE
+  app.get('/test', (Request req) {
+    return Response.ok('Test route works ✔');
+  });
+     
+  // POST TEST
+                [ line 1 of 37 (2%), character 0 of 888 (0%) ]                  
+^G Get Help  ^O WriteOut  ^R Read File ^Y Prev Pg   ^K Cut Text  ^C Cur 
+import 'package:shelf/shelf.dart';
+import 'package:shelf/shelf_io.dart' as io;
+import 'package:shelf_router/shelf_router.dart';
+
+void main() async {
+  final app = Router();
+
+  // HOME ROUTE
+  app.get('/', (Request req) {
+    return Response.ok('Backend is running 🚀');
+  });
+
+  // TEST ROUTE
+  app.get('/test', (Request req) {
+    return Response.ok('Test route works ✔');
+  });
+
+  // POST TEST
+  app.post('/test', (Request req) async {
+    final body = jsonDecode(await req.readAsString());
+
+    return Response.ok(
+      jsonEncode({'message': 'Received', 'data': body}),
+      headers: {'Content-Type': 'application/json'},
+    );
+  });
+
+  final handler = Pipeline()
+      .addMiddleware(logRequests())
+      .addHandler(app.call);
+
+  final server = await io.serve(handler, InternetAddress.anyIPv4, 8080);
+
+  print('Server running on http://${server.address.host}:${server.port}');
+}

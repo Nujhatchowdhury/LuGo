@@ -1,0 +1,256 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+
+class ApiService {
+  static final RegExp studentEmailPattern = RegExp(
+    r'^[a-z]+_018\d{13}@lus\.ac\.bd$',
+  );
+  static final RegExp driverEmailPattern = RegExp(
+    r'^[a-z][a-z0-9._%+-]*@lus\.ac\.bd$',
+  );
+  static final RegExp studentIdPattern = RegExp(r'^018\d{13}$');
+  static final RegExp driverIdPattern = RegExp(r'^4\d{4}$');
+  static Future<bool>? _backendStartup;
+
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:8080';
+    }
+
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'http://10.0.2.2:8080';
+      default:
+        return 'http://localhost:8080';
+    }
+  }
+
+  static bool get canManageLocalBackend {
+    if (kIsWeb) {
+      return false;
+    }
+
+    return defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+  }
+
+  static bool isValidLoginIdentifier(String value) {
+    final normalized = value.trim().toLowerCase();
+    return studentEmailPattern.hasMatch(normalized) ||
+        driverEmailPattern.hasMatch(normalized) ||
+        studentIdPattern.hasMatch(normalized) ||
+        driverIdPattern.hasMatch(normalized);
+  }
+
+  static Future<void> warmUpLocalBackend() async {
+    await _ensureBackendAvailable();
+  }
+
+  static Map<String, dynamic> _decodeResponse(http.Response response) {
+    final body = response.body.trim();
+
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {
+      // Fall through to a normalized error payload below.
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return {
+        'success': true,
+        'message': body.isEmpty ? 'Request completed successfully.' : body,
+      };
+    }
+
+    return {
+      'success': false,
+      'message': body.isEmpty
+          ? 'Request failed with status ${response.statusCode}.'
+          : body,
+      'statusCode': response.statusCode,
+    };
+  }
+
+  static Uri _uriForPath(String path) => Uri.parse('$baseUrl$path');
+
+  static Future<http.Response> _postJson(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      return await http.post(
+        _uriForPath(path),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+    } on SocketException {
+      final recovered = await _ensureBackendAvailable();
+      if (!recovered) {
+        rethrow;
+      }
+
+      return http.post(
+        _uriForPath(path),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+    } on http.ClientException {
+      final recovered = await _ensureBackendAvailable();
+      if (!recovered) {
+        rethrow;
+      }
+
+      return http.post(
+        _uriForPath(path),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+    }
+  }
+
+  static Future<bool> _ensureBackendAvailable() async {
+    if (!canManageLocalBackend) {
+      return false;
+    }
+
+    if (await _isBackendReachable()) {
+      return true;
+    }
+
+    final pending = _backendStartup;
+    if (pending != null) {
+      return pending;
+    }
+
+    final startup = _startBackendAndWait();
+    _backendStartup = startup;
+    final result = await startup;
+    _backendStartup = null;
+    return result;
+  }
+
+  static Future<bool> _isBackendReachable() async {
+    try {
+      final response = await http
+          .get(_uriForPath('/'))
+          .timeout(const Duration(milliseconds: 1200));
+      return response.statusCode >= 200 && response.statusCode < 500;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Directory? _resolveBackendDirectory() {
+    final current = Directory.current;
+    final candidates = <Directory>[
+      Directory('${current.path}/../../backend/lugo_backend'),
+      Directory('${current.path}/../backend/lugo_backend'),
+      Directory('${current.path}/backend/lugo_backend'),
+    ];
+
+    for (final directory in candidates) {
+      final serverFile = File('${directory.path}/bin/lugo_backend.dart');
+      if (serverFile.existsSync()) {
+        return directory;
+      }
+    }
+
+    return null;
+  }
+
+  static Future<bool> _startBackendAndWait() async {
+    final backendDirectory = _resolveBackendDirectory();
+    if (backendDirectory == null) {
+      return false;
+    }
+
+    try {
+      await Process.start(
+        'dart',
+        ['run', 'bin/lugo_backend.dart'],
+        workingDirectory: backendDirectory.path,
+        mode: ProcessStartMode.detached,
+      );
+    } catch (_) {
+      return false;
+    }
+
+    for (var i = 0; i < 10; i++) {
+      await Future.delayed(const Duration(milliseconds: 700));
+      if (await _isBackendReachable()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // REGISTER
+  static Future<Map<String, dynamic>> registerUser(Map data) async {
+    final response = await _postJson(
+      '/register',
+      Map<String, dynamic>.from(data),
+    );
+
+    return _decodeResponse(response);
+  }
+
+  // VERIFY OTP
+  static Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    final response = await _postJson('/verify', {
+      "email": email,
+      "otp": otp,
+    });
+
+    return _decodeResponse(response);
+  }
+
+  // LOGIN
+  static Future<Map<String, dynamic>> login(String email, String password) async {
+    final response = await _postJson('/login', {
+      "email": email,
+      "password": password,
+    });
+
+    return _decodeResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> requestPasswordReset(String email) async {
+    final response = await _postJson('/forgot-password', {"email": email});
+
+    return _decodeResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> verifyResetOtp({
+    required String email,
+    required String otp,
+  }) async {
+    final response = await _postJson('/verify-reset-otp', {
+      "email": email,
+      "otp": otp,
+    });
+
+    return _decodeResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    final response = await _postJson('/reset-password', {
+      "email": email,
+      "otp": otp,
+      "newPassword": newPassword,
+    });
+
+    return _decodeResponse(response);
+  }
+}
