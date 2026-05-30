@@ -89,7 +89,7 @@ class ApiService {
         _uriForPath(path),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 8));
     } on SocketException {
       final recovered = await _ensureBackendAvailable();
       if (!recovered) {
@@ -100,7 +100,7 @@ class ApiService {
         _uriForPath(path),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 8));
     } on http.ClientException {
       final recovered = await _ensureBackendAvailable();
       if (!recovered) {
@@ -111,7 +111,7 @@ class ApiService {
         _uriForPath(path),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 8));
     }
   }
 
@@ -150,10 +150,19 @@ class ApiService {
   static Directory? _resolveBackendDirectory() {
     final current = Directory.current;
     final candidates = <Directory>[
+      Directory('/Users/najifanujhat/Downloads/lugo_project/backend/lugo_backend'),
       Directory('${current.path}/../../backend/lugo_backend'),
       Directory('${current.path}/../backend/lugo_backend'),
       Directory('${current.path}/backend/lugo_backend'),
     ];
+
+    final executableDirectory = File(Platform.resolvedExecutable).parent;
+    var parent = executableDirectory;
+    for (var i = 0; i < 8; i++) {
+      candidates.add(Directory('${parent.path}/backend/lugo_backend'));
+      candidates.add(Directory('${parent.path}/../backend/lugo_backend'));
+      parent = parent.parent;
+    }
 
     for (final directory in candidates) {
       final serverFile = File('${directory.path}/bin/lugo_backend.dart');
@@ -182,8 +191,8 @@ class ApiService {
       return false;
     }
 
-    for (var i = 0; i < 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 700));
+    for (var i = 0; i < 12; i++) {
+      await Future.delayed(const Duration(milliseconds: 500));
       if (await _isBackendReachable()) {
         return true;
       }

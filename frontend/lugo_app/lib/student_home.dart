@@ -86,12 +86,15 @@ class StudentHome extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const _InfoCard(
+                _InfoCard(
                   icon: Icons.location_searching_rounded,
                   title: 'Live Bus Tracking',
                   description:
-                      'See where the bus is right now and follow its movement in real time.',
+                      'Tap here to see the bus move on the route and check the next stop.',
                   accent: Color(0xFF1F7A8C),
+                  onTap: () {
+                    Navigator.pushNamed(context, '/tracking');
+                  },
                 ),
                 const SizedBox(height: 14),
                 const _InfoCard(

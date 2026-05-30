@@ -11,6 +11,7 @@ import 'register_screen.dart';
 import 'routes_screen.dart';
 import 'service.dart';
 import 'student_home.dart';
+import 'tracking_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,7 @@ class LuGoApp extends StatelessWidget {
         '/driverHome': (context) => DriverHome(),
         '/studentHome': (context) => StudentHome(),
         '/routes': (context) => RoutesScreen(),
+        '/tracking': (context) => TrackingScreen(),
       },
     );
   }
