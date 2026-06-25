@@ -3,7 +3,7 @@ import 'dart:convert';
 
 Future<void> registerUser() async {
   var response = await http.post(
-    Uri.parse('http://localhost:8080/register'),
+    Uri.parse('http://192.168.0.180:8080/register'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       "name": "Najifa",

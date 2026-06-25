@@ -103,7 +103,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
               ),
               const SizedBox(height: 8),
               const Text(
-                'Enter your LuGo email first. We will send a reset OTP to your registered email address.',
+                'Enter your LuGo email first. If email delivery is unavailable, LuGo will show a secure reset OTP in the app.',
                 style: TextStyle(
                   fontSize: 15,
                   height: 1.45,
@@ -142,7 +142,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                         onPressed: requesting ? null : _requestOtp,
                         style: _buttonStyle(),
                         child: Text(
-                          requesting ? 'Sending OTP...' : 'Send reset OTP',
+                          requesting ? 'Preparing OTP...' : 'Get reset OTP',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -274,7 +274,7 @@ class _VerifyResetOtpScreenState extends State<VerifyResetOtpScreen> {
               Text(
                 emailDelivered
                     ? 'We sent the reset OTP to ${sentTo ?? 'your registered email'}.'
-                    : 'Enter the reset OTP to continue.',
+                    : 'Email delivery is unavailable right now. Use the reset OTP below to continue.',
                 style: const TextStyle(
                   fontSize: 15,
                   height: 1.45,
@@ -311,10 +311,19 @@ class _VerifyResetOtpScreenState extends State<VerifyResetOtpScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Development OTP',
+                              'Reset OTP',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
+                                color: Color(0xFF925C00),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Use this code to verify your password reset.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                height: 1.3,
                                 color: Color(0xFF925C00),
                               ),
                             ),

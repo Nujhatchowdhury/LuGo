@@ -16,3 +16,28 @@ CREATE TABLE IF NOT EXISTS users (
 
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS role ENUM('student', 'driver') NOT NULL DEFAULT 'student';
+
+CREATE TABLE IF NOT EXISTS bus_rsvps (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  student_email VARCHAR(255) NOT NULL,
+  route_name VARCHAR(120) NOT NULL,
+  pickup_location VARCHAR(255) NOT NULL,
+  ride_time VARCHAR(30) NOT NULL,
+  ride_date DATE NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_student_ride (
+    student_email,
+    route_name,
+    ride_time,
+    ride_date
+  )
+);
+
+CREATE TABLE IF NOT EXISTS admin_notifications (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  target_email VARCHAR(255) DEFAULT NULL,
+  title VARCHAR(180) NOT NULL,
+  message TEXT NOT NULL,
+  ride_date DATE DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'admin_bus_screen.dart';
+import 'admin_login_screen.dart';
+import 'bus_availability_screen.dart';
 import 'driver_home.dart';
 import 'forgot_password_screen.dart';
 import 'landing_screen.dart';
@@ -39,7 +42,13 @@ class LuGoApp extends StatelessWidget {
         '/studentHome': (context) => StudentHome(),
         '/routes': (context) => RoutesScreen(),
         '/tracking': (context) => TrackingScreen(),
+        '/busAvailability': (context) => BusAvailabilityScreen(),
+        '/notifications': (context) => NotificationsScreen(),
+        '/adminLogin': (context) => AdminLoginScreen(),
+        '/adminBus': (context) => AdminBusScreen(),
       },
+      onUnknownRoute: (_) =>
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
   }
 }

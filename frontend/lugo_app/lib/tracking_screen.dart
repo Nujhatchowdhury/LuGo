@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'service.dart';
+
 class TrackingScreen extends StatefulWidget {
   const TrackingScreen({super.key});
 
@@ -11,7 +13,11 @@ class TrackingScreen extends StatefulWidget {
 
 class _TrackingScreenState extends State<TrackingScreen> {
   Timer? _timer;
+  Timer? _gpsTimer;
   double _progress = 0.18;
+  bool _loadingGps = true;
+  Map<String, dynamic>? _liveLocation;
+  String? _gpsMessage;
 
   static const List<String> _stops = [
     'Tilagor',
@@ -25,6 +31,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
   @override
   void initState() {
     super.initState();
+    _loadLiveLocation();
+    _gpsTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _loadLiveLocation();
+    });
     _timer = Timer.periodic(const Duration(milliseconds: 900), (_) {
       setState(() {
         _progress += 0.035;
@@ -38,13 +48,31 @@ class _TrackingScreenState extends State<TrackingScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _gpsTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadLiveLocation() async {
+    final response = await ApiService.loadBusLocation();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _loadingGps = false;
+      _liveLocation = response['item'] is Map
+          ? Map<String, dynamic>.from(response['item'] as Map)
+          : null;
+      _gpsMessage = response['message']?.toString();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final nextStopIndex = ((_progress * (_stops.length - 1)).ceil())
-        .clamp(1, _stops.length - 1);
+    final nextStopIndex = ((_progress * (_stops.length - 1)).ceil()).clamp(
+      1,
+      _stops.length - 1,
+    );
     final etaMinutes = ((1 - _progress) * 32).ceil().clamp(2, 32);
 
     return Scaffold(
@@ -123,6 +151,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 ],
               ),
               const SizedBox(height: 16),
+              _LiveGpsCard(
+                loading: _loadingGps,
+                location: _liveLocation,
+                message: _gpsMessage,
+                onRefresh: _loadLiveLocation,
+              ),
+              const SizedBox(height: 16),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
@@ -167,10 +202,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
 }
 
 class _TrackingMap extends StatelessWidget {
-  const _TrackingMap({
-    required this.progress,
-    required this.stops,
-  });
+  const _TrackingMap({required this.progress, required this.stops});
 
   final double progress;
   final List<String> stops;
@@ -193,14 +225,115 @@ class _TrackingMap extends StatelessWidget {
                   painter: _RouteMapPainter(progress: progress),
                 ),
               ),
-              Positioned(
-                left: busLeft,
-                top: busTop,
-                child: const _MiniBus(),
-              ),
+              Positioned(left: busLeft, top: busTop, child: const _MiniBus()),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _LiveGpsCard extends StatelessWidget {
+  const _LiveGpsCard({
+    required this.loading,
+    required this.location,
+    required this.message,
+    required this.onRefresh,
+  });
+
+  final bool loading;
+  final Map<String, dynamic>? location;
+  final String? message;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final latitude = double.tryParse(location?['latitude'].toString() ?? '');
+    final longitude = double.tryParse(location?['longitude'].toString() ?? '');
+    final accuracy = double.tryParse(location?['accuracy'].toString() ?? '');
+    final updatedAt = location?['updatedAt']?.toString() ?? '';
+    final routeName = location?['routeName']?.toString() ?? 'Route 1 - Tilagor';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Live GPS',
+                  style: TextStyle(
+                    color: Color(0xFF16324F),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Refresh GPS',
+                onPressed: onRefresh,
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  color: Color(0xFF1F7A8C),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (loading)
+            const LinearProgressIndicator()
+          else if (latitude == null || longitude == null)
+            Text(
+              message ?? 'No live bus GPS has been shared yet.',
+              style: const TextStyle(
+                color: Color(0xFF5B6572),
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else ...[
+            Text(
+              routeName,
+              style: const TextStyle(
+                color: Color(0xFFE07A24),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Latitude: ${latitude.toStringAsFixed(6)}',
+              style: const TextStyle(color: Color(0xFF5B6572)),
+            ),
+            Text(
+              'Longitude: ${longitude.toStringAsFixed(6)}',
+              style: const TextStyle(color: Color(0xFF5B6572)),
+            ),
+            if (accuracy != null)
+              Text(
+                'Accuracy: ${accuracy.toStringAsFixed(1)} m',
+                style: const TextStyle(color: Color(0xFF5B6572)),
+              ),
+            if (updatedAt.isNotEmpty)
+              Text(
+                'Updated: $updatedAt',
+                style: const TextStyle(color: Color(0xFF5B6572)),
+              ),
+          ],
+        ],
       ),
     );
   }
@@ -291,31 +424,11 @@ class _MiniBus extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned(
-            left: 9,
-            top: 9,
-            child: _Window(),
-          ),
-          Positioned(
-            left: 30,
-            top: 9,
-            child: _Window(),
-          ),
-          Positioned(
-            left: 50,
-            top: 9,
-            child: _Window(width: 9),
-          ),
-          const Positioned(
-            left: 9,
-            bottom: 4,
-            child: _Wheel(),
-          ),
-          const Positioned(
-            right: 9,
-            bottom: 4,
-            child: _Wheel(),
-          ),
+          Positioned(left: 9, top: 9, child: _Window()),
+          Positioned(left: 30, top: 9, child: _Window()),
+          Positioned(left: 50, top: 9, child: _Window(width: 9)),
+          const Positioned(left: 9, bottom: 4, child: _Wheel()),
+          const Positioned(right: 9, bottom: 4, child: _Wheel()),
         ],
       ),
     );
@@ -428,8 +541,8 @@ class _StopRow extends StatelessWidget {
     final color = isNext
         ? const Color(0xFFE07A24)
         : isPassed
-            ? const Color(0xFF1F7A8C)
-            : const Color(0xFFB7C3CE);
+        ? const Color(0xFF1F7A8C)
+        : const Color(0xFFB7C3CE);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -448,7 +561,9 @@ class _StopRow extends StatelessWidget {
             child: Text(
               stop,
               style: TextStyle(
-                color: isNext ? const Color(0xFF16324F) : const Color(0xFF5B6572),
+                color: isNext
+                    ? const Color(0xFF16324F)
+                    : const Color(0xFF5B6572),
                 fontWeight: isNext ? FontWeight.w900 : FontWeight.w700,
               ),
             ),

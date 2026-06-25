@@ -97,6 +97,17 @@ class StudentHome extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 14),
+                _InfoCard(
+                  icon: Icons.event_available_rounded,
+                  title: 'Seat RSVP',
+                  description:
+                      'Reserve your own bus seat for the date, route, pickup point, and time you need.',
+                  accent: Color(0xFFE07A24),
+                  onTap: () {
+                    Navigator.pushNamed(context, '/busAvailability');
+                  },
+                ),
+                const SizedBox(height: 14),
                 const _InfoCard(
                   icon: Icons.access_time_filled_rounded,
                   title: 'ETA to Destination',

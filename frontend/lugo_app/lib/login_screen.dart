@@ -55,9 +55,7 @@ class _LoginScreenState extends State<LoginScreen>
 
     if (!isValidIdentifier) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Enter a valid email or ID.'),
-        ),
+        const SnackBar(content: Text('Enter a valid email or ID.')),
       );
       return;
     }
@@ -328,6 +326,19 @@ class _LoginScreenState extends State<LoginScreen>
                                   child: const Text('Sign up'),
                                 ),
                               ],
+                            ),
+                            const SizedBox(height: 4),
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  Navigator.pushNamed(context, '/adminLogin');
+                                },
+                                icon: const Icon(
+                                  Icons.admin_panel_settings_rounded,
+                                  size: 18,
+                                ),
+                                label: const Text('Admin panel'),
+                              ),
                             ),
                           ],
                         ),
